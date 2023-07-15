@@ -1,47 +1,59 @@
 package com.telran.demospringboot.controller;
 
 import com.telran.demospringboot.model.Student;
+import com.telran.demospringboot.service.DemoService;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping(("/app"))
 public class DemoController {
 
-    private List<Student> students;
+    private final DemoService service;
 
-    public DemoController() {
-        students = new ArrayList<>();
-        students.add(new Student("Tom", "Werner", 16));
-        students.add(new Student("Mary", "Werner", 15));
-        students.add(new Student("Jane", "Fox", 14));
-        students.add(new Student("Ivan", "Ivanov", 20));
-        students.add(new Student("Simon", "Smiths", 21));
+//    @Autowired
+//    public void setService(DemoService service) {
+//        this.service = service;
+//    }
+
+    @Autowired
+    public DemoController(DemoService service) {
+        System.out.println("Controller bean created");
+        this.service = service;
+    }
+
+    @PostConstruct
+    public void initDemoMethod(){
+        System.out.println("Controller init method called");
+    }
+
+    @PreDestroy
+    public void destroyDemoMethod(){
+        System.out.println("Controller destroy method called");
     }
 
     @GetMapping("/all")
+//    @RequestMapping(value = "/all", method = RequestMethod.GET)
     public List<Student> findAll(){
-        return students;
+        return service.getAllStudents();
     }
 
     @PostMapping("/add")
     public void add(@RequestBody Student student){
-        students.add(student);
+        service.add(student);
     }
 
     @PutMapping("/add")
     public ResponseEntity<Student> update(@RequestBody Student student){
-        Optional<Student> first = students.stream().filter(student1 -> student1.getName().equals(student.getName())).findFirst();
-        if (first.isPresent()){
-            Student studentFromList = first.get();
-            studentFromList.setSurname(student.getSurname());
-            studentFromList.setAge(student.getAge());
-            return new ResponseEntity<>(studentFromList, HttpStatus.ACCEPTED);
+        Student updated = service.update(student);
+        if (updated != null) {
+            return new ResponseEntity<>(updated, HttpStatus.ACCEPTED);
         } else {
            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
@@ -49,18 +61,17 @@ public class DemoController {
 
     @PatchMapping("/add")
     public ResponseEntity<Student> updateAge(@RequestParam String name, @RequestParam Integer age){
-        Optional<Student> first = students.stream().filter(student1 -> student1.getName().equals(name)).findFirst();
-        if (first.isPresent()) {
-            Student student = first.get();
-            student.setAge(age);
-            return new ResponseEntity<>(student, HttpStatus.ACCEPTED);
+        Student updated = service.updateAge(name, age);
+        if (updated != null) {
+            return new ResponseEntity<>(updated, HttpStatus.ACCEPTED);
+        } else {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
     }
 
     @DeleteMapping("/delete/{name}")
     public void delete(@PathVariable String name){
-        students.removeIf(student -> student.getName().equals(name));
+        service.deleteByName(name);
     }
 
 }
